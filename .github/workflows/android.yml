@@ -27,7 +27,7 @@ jobs:
         with:
           cmdline-tools-version: 12266719
           packages: |
-            platforms;android-36-ext1
+            platforms;android-36
             build-tools;36.0.0
             platform-tools
 
