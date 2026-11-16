@@ -1,49 +1,55 @@
 name: Build Club BD APK
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Unzip project
+        run: |
+          test -f club-bd-fixed-2.zip || { echo "club-bd-fixed-2.zip not found in repo root"; ls -la; exit 1; }
+          mkdir project
+          unzip -q club-bd-fixed-2.zip -d project
+          if [ ! -f project/settings.gradle.kts ]; then
+            d=$(dirname "$(find project -name settings.gradle.kts | head -1)")
+            echo "PROJECT_DIR=$d" >> "$GITHUB_ENV"
+          else
+            echo "PROJECT_DIR=project" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
-      - name: Extract project
-        run: unzip -q club-bd.zip -d project
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
-
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager "platforms;android-36"
-          sdkmanager "build-tools;36.0.0"
-          sdkmanager "platform-tools"
-
-      - name: Setup Gradle
+      - name: Set up Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.3.1'
+          gradle-version: 9.3.1
 
-      - name: Build APK
-        run: gradle assembleDebug
-        working-directory: project
+      - name: Create debug keystore
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          keytool -genkeypair -v -keystore debug.keystore \
+            -storepass android -keypass android -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          cp .env.example .env
+
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Club-BD-APK
-          path: project/app/build/outputs/apk/debug/*.apk
+          name: club-bd-debug-apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
