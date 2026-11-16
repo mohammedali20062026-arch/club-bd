@@ -34,7 +34,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 9.3.1
-
+      - name: Fix KSP version
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: sed -i 's/^googleDevtoolsKsp = ".*"/googleDevtoolsKsp = "2.3.14"/' gradle/libs.versions.toml
       - name: Create debug keystore
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
