@@ -14,12 +14,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Unzip project
+      - name: Unzip newest project zip
         run: |
-          test -f club-bd-fixed-2.zip || { echo "club-bd-fixed-2.zip not found in repo root"; ls -la; exit 1; }
+          ZIP=$(for f in club-bd-fixed-2*.zip; do echo "$(git log -1 --format=%ct -- "$f") $f"; done | sort -n | tail -1 | cut -d' ' -f2-)
+          test -n "$ZIP" || { echo "No club-bd-fixed-2*.zip found"; ls -la; exit 1; }
+          echo "Using: $ZIP"
           mkdir project
-          unzip -q club-bd-fixed-2.zip -d project
+          unzip -q "$ZIP" -d project
           if [ ! -f project/settings.gradle.kts ]; then
             d=$(dirname "$(find project -name settings.gradle.kts | head -1)")
             echo "PROJECT_DIR=$d" >> "$GITHUB_ENV"
